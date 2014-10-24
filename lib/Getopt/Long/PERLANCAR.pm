@@ -10,14 +10,15 @@
 
 ################ Module Preamble ################
 
-package Getopt::Long;
+package Getopt::Long::PERLANCAR;
 
 use 5.004;
 
 use strict;
 
-use vars qw($VERSION);
-$VERSION        =  2.42;
+#use vars qw($VERSION);
+our $VERSION = 'v2.42'; # VERSION
+
 # For testing versions only.
 use vars qw($VERSION_STRING);
 $VERSION_STRING = "2.42";
@@ -127,12 +128,12 @@ ConfigDefaults();
 
 ################ OO Interface ################
 
-package Getopt::Long::Parser;
+package Getopt::Long::PERLANCAR::Parser;
 
 # Store a copy of the default configuration. Since ConfigDefaults has
 # just been called, what we get from Configure is the default.
 my $default_config = do {
-    Getopt::Long::Configure ()
+    Getopt::Long::PERLANCAR::Configure ()
 };
 
 sub new {
@@ -147,8 +148,8 @@ sub new {
 
     # Process config attributes.
     if ( defined $atts{config} ) {
-	my $save = Getopt::Long::Configure ($default_config, @{$atts{config}});
-	$self->{settings} = Getopt::Long::Configure ($save);
+	my $save = Getopt::Long::PERLANCAR::Configure ($default_config, @{$atts{config}});
+	$self->{settings} = Getopt::Long::PERLANCAR::Configure ($save);
 	delete ($atts{config});
     }
     # Else use default config.
@@ -168,10 +169,10 @@ sub configure {
     my ($self) = shift;
 
     # Restore settings, merge new settings in.
-    my $save = Getopt::Long::Configure ($self->{settings}, @_);
+    my $save = Getopt::Long::PERLANCAR::Configure ($self->{settings}, @_);
 
     # Restore orig config and save the new config.
-    $self->{settings} = Getopt::Long::Configure ($save);
+    $self->{settings} = Getopt::Long::PERLANCAR::Configure ($save);
 }
 
 sub getoptions {
@@ -184,29 +185,29 @@ sub getoptionsfromarray {
     my ($self) = shift;
 
     # Restore config settings.
-    my $save = Getopt::Long::Configure ($self->{settings});
+    my $save = Getopt::Long::PERLANCAR::Configure ($self->{settings});
 
     # Call main routine.
     my $ret = 0;
-    $Getopt::Long::caller = $self->{caller_pkg};
+    $Getopt::Long::PERLANCAR::caller = $self->{caller_pkg};
 
     eval {
 	# Locally set exception handler to default, otherwise it will
 	# be called implicitly here, and again explicitly when we try
 	# to deliver the messages.
 	local ($SIG{__DIE__}) = 'DEFAULT';
-	$ret = Getopt::Long::GetOptionsFromArray (@_);
+	$ret = Getopt::Long::PERLANCAR::GetOptionsFromArray (@_);
     };
 
     # Restore saved settings.
-    Getopt::Long::Configure ($save);
+    Getopt::Long::PERLANCAR::Configure ($save);
 
     # Handle errors and return value.
     die ($@) if $@;
     return $ret;
 }
 
-package Getopt::Long;
+package Getopt::Long::PERLANCAR;
 
 ################ Back to Normal ################
 
@@ -293,7 +294,7 @@ sub GetOptionsFromArray(@) {
 	# Avoid some warnings if debugging.
 	local ($^W) = 0;
 	print STDERR
-	  ("Getopt::Long $Getopt::Long::VERSION ",
+	  ("Getopt::Long::PERLANCAR $Getopt::Long::PERLANCAR::VERSION ",
 	   "called from package \"$pkg\".",
 	   "\n  ",
 	   "argv: (@$argv)",
@@ -587,7 +588,7 @@ sub GetOptionsFromArray(@) {
 			    local $SIG{__DIE__}  = 'DEFAULT';
 			    eval {
 				&{$linkage{$opt}}
-				  (Getopt::Long::CallBack->new
+				  (Getopt::Long::PERLANCAR::CallBack->new
 				   (name    => $opt,
 				    ctl     => $ctl,
 				    opctl   => \%opctl,
@@ -779,6 +780,27 @@ sub OptCtl ($) {
 	  ). "]";
 }
 
+sub _negations_of {
+    my $word = shift;
+    if ($word =~ /^with-(.+)/) {
+        return ("without-$1");
+    } elsif ($word =~ /^without-(.+)/) {
+        return ("with-$1");
+    } else {
+        return ("no$word", "no$word");
+    }
+}
+
+sub _strip_negation {
+    my $opt = shift;
+    {
+        last if $opt =~ s/^no-?//i;
+        last if $opt =~ s/^without-(.)/with-$1/;
+        #last if $opt =~ s/^with-(.)/without-$1/;
+    }
+    $opt;
+}
+
 # Parse an option specification and fill the tables.
 sub ParseOptionSpec ($$) {
     my ($opt, $opctl) = @_;
@@ -885,8 +907,9 @@ sub ParseOptionSpec ($$) {
 	}
 
 	if ( $spec eq '!' ) {
-	    $opctl->{"no$_"} = $entry;
-	    $opctl->{"no-$_"} = $entry;
+	    for (_negations_of($_)) {
+                $opctl->{$_} = $entry;
+            }
 	    $opctl->{$_} = [@$entry];
 	    $opctl->{$_}->[CTL_TYPE] = '';
 	}
@@ -1064,8 +1087,8 @@ sub FindOption ($$$$$) {
 	    $arg = 1;
 	}
 	else {
-	    $opt =~ s/^no-?//i;	# strip NO prefix
-	    $arg = 0;		# supply explicit value
+	    $opt = _strip_negation($opt);
+            $arg = 0;		# supply explicit value
 	}
 	unshift (@$argv, $starter.$rest) if defined $rest;
 	return (1, $opt, $ctl, $arg);
@@ -1416,8 +1439,8 @@ sub VersionMessage(@) {
 	       "\n",
 	       "(", __PACKAGE__, "::", "GetOptions",
 	       " version ",
-	       defined($Getopt::Long::VERSION_STRING)
-	         ? $Getopt::Long::VERSION_STRING : $VERSION, ";",
+	       defined($Getopt::Long::PERLANCAR::VERSION_STRING)
+	         ? $Getopt::Long::PERLANCAR::VERSION_STRING : $VERSION, ";",
 	       " Perl version ",
 	       $] >= 5.006 ? sprintf("%vd", $^V) : $],
 	       ")\n");
@@ -1488,7 +1511,7 @@ sub VERSION {
     shift->SUPER::VERSION(@_);
 }
 
-package Getopt::Long::CallBack;
+package Getopt::Long::PERLANCAR::CallBack;
 
 sub new {
     my ($pkg, %atts) = @_;
@@ -1507,11 +1530,9 @@ use overload
 
 1;
 
+# ABSTRACT: Extended processing of command line options
+
 ################ Documentation ################
-
-=head1 NAME
-
-Getopt::Long - Extended processing of command line options
 
 =head1 SYNOPSIS
 
@@ -1525,6 +1546,21 @@ Getopt::Long - Extended processing of command line options
   or die("Error in command line arguments\n");
 
 =head1 DESCRIPTION
+
+B<BEGIN DOCUMENTATION OF GETOPT::LONG::PERLANCAR>
+
+This experiment tries to provide different negation forms for negatable options.
+Instead of always using C<--nofoo> and C<--no-foo>, it will use:
+
+=over
+
+=item * --without-foo (if option /^with-./)
+
+=item * --with-foo (if option /^without-./)
+
+=back
+
+B<END DOCUMENTATION OF GETOPT::LONG::PERLANCAR>
 
 The Getopt::Long module implements an extended getopt function called
 GetOptions(). It parses the command line from C<@ARGV>, recognizing

@@ -1534,6 +1534,8 @@ use overload
 
 ################ Documentation ################
 
+=for Pod::Coverage .+
+
 =head1 SYNOPSIS
 
   use Getopt::Long;
